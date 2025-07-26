@@ -13,6 +13,7 @@ class InvDocument{
 	protected:
 
 		string segmentID;
+		int segmentIDLen;
 		int numElements;
 		int sequence;
 	
@@ -24,14 +25,16 @@ class InvDocument{
 
 		{
 			segmentID = "";
+			segmentIDLen = 0;
 			numElements = 0;
 			sequence = 0;
 		}
 
-		InvDocument(string segIDVal, int numElems, int seq, int elementLen)
+		InvDocument(string segIDVal, int segmentIDLength, int numElems, int seq, int elementLen)
 
 		{
 			segmentID = segIDVal;
+			segmentIDLen = segmentIDLength;
 			numElements = numElems;
 			sequence = seq;
 		}
@@ -45,6 +48,11 @@ class InvDocument{
 		void setSegmentID(string segIDVal)
 		{
 			segmentID = segIDVal;
+		}
+
+		void setSegmentIDLen(int segmentIDLength) 
+		{
+			segmentIDLen = segmentIDLength;
 		}
 
 		void setNumElements(int numElems)
@@ -66,6 +74,11 @@ class InvDocument{
 			return segmentID;
 		}
 
+		int getSegmentIDLen() const
+		{
+			return segmentIDLen;
+		}
+
 		int getNumElements() const
 		{
 			return numElements;
@@ -81,6 +94,11 @@ class InvDocument{
 		void displaySegmentID() //TODO: Should const be displayed here? There's already a guard with the accessor in the called get functions.
 		{
 			std::cout << getSegmentID();
+		}
+
+		void displaySegmentIDLen()
+		{
+			std::cout << getSegmentIDLen();
 		}
 
 		void displayNumElements()

@@ -50,29 +50,47 @@ using namespace std;
 
 
 fstream openInvoiceInputFile();
-string readInvoiceInputFileLine(fstream&, int&);
+string readInvoiceInputFile(fstream&, int&, int&);
+void closeInvoiceInputFile(fstream&);
+InvDocument* parseDocumentLevelData(InvDocument*, string, const int, const int);
 
 
 
 int main() {
 
 	fstream invoiceInputFile;
-	string invoiceInputFileLine;
-	int delimiterCounter = 0;
-	int lineCounter = 0;
-	
+	string invoiceInputFileContentsStr;
+	int totalElementDelimiterCounter = 0;
+	int totalLineDelimiterCounter = 0;
+
+	//Open, read, close inputFile to pre-process/get set up. Also get the number of rows/columns (even though each row has a variable number of contents) while reading it.
 	invoiceInputFile = openInvoiceInputFile();
+	invoiceInputFileContentsStr = readInvoiceInputFile(invoiceInputFile, totalElementDelimiterCounter, totalLineDelimiterCounter);
+	closeInvoiceInputFile(invoiceInputFile);
 
-	while (invoiceInputFile) {
 
-		readInvoiceInputFileLine(invoiceInputFile, delimiterCounter);
-		lineCounter++;
+	//Create a dynamically allocated array to store the invoice document structure info.
+	InvDocument* invDocumentStructureArr = nullptr;
+	invDocumentStructureArr = new InvDocument[totalLineDelimiterCounter]; //TODO: Make sure to dealloc later.
+	
+	invDocumentStructureArr = parseDocumentLevelData(invDocumentStructureArr, invoiceInputFileContentsStr, totalElementDelimiterCounter, totalLineDelimiterCounter);
+
+
+
+
+	for (int i = 0; i < totalLineDelimiterCounter; i++) {
+
+		cout << "Sequence: ";
+		invDocumentStructureArr[i].displaySequence();
+		cout << "\nSegment ID: ";
+		invDocumentStructureArr[i].displaySegmentID();
+		cout << "\nSegment Length: ";
+		invDocumentStructureArr[i].displaySegmentIDLen();
+		cout << endl << endl;
 
 	}
 
-	cout << "\nLines: " << lineCounter;
 
-	
 
 	cout << endl << endl;
 	system("pause");
@@ -96,28 +114,79 @@ fstream openInvoiceInputFile() {
 
 	return invoiceInputFile;
 
-
 }
 
 
 
-string readInvoiceInputFileLine(fstream &invoiceInputFile, int &delimiterCounter) {
+string readInvoiceInputFile(fstream &invoiceInputFile, int &totalElementDelimiterCounter, int &totalLineDelimiterCounter) {
 
-	string contents;
-	char delimiter = '*';
-	char singleChar = '@'; //Initialize to garbage.
+	string fileContentsStr;
 
-	delimiterCounter = 0;
+	char elementDelimiter = '*';
+	char lineDelimiter = '~';
 
+	totalElementDelimiterCounter = 0; //Just to be safe.
+	totalLineDelimiterCounter = 0;
 
-	for (int i = 0; i < contents.length(); i++) {
+	while (getline(invoiceInputFile, fileContentsStr)) {
 
-		if (contents.at(i) == delimiter) {
-			delimiterCounter++;
+		for (int i = 0; i < fileContentsStr.length(); i++) {
+
+			if (fileContentsStr.at(i) == elementDelimiter) {
+				totalElementDelimiterCounter++;
+			}
+
+			else if (fileContentsStr.at(i) == lineDelimiter) {
+				totalLineDelimiterCounter++;
+			}
+
 		}
 
 	}
+	
+	return fileContentsStr;
 
-	return contents;
+}
+
+void closeInvoiceInputFile(fstream &invoiceInputFile) {
+
+	if (invoiceInputFile.is_open()) {
+		invoiceInputFile.close();
+	}
+
+}
+
+InvDocument* parseDocumentLevelData(InvDocument* invoiceDocumentStructureArr, string fileContentsStr, const int totalElementDelimiterCounter, const int totalLineDelimiterCounter) {
+
+	string segID = "";
+	int numElems = 0;
+	int index = 0;
+	char elementDelimiter = '*';
+	char lineDelimiter = '~';
+	char buffer = '@'; //Dummy value to start.
+	int charCounter = 0;
+	stringstream fileContentsStream; //Setting up a stringstream to make parsing much friendlier.
+	stringstream lineContentsStream;
+	string lineBuffer;
+	string elementBuffer;
+
+	fileContentsStream << fileContentsStr;
+	
+	while (getline(fileContentsStream, lineBuffer, lineDelimiter)){
+
+		invoiceDocumentStructureArr[index].setSequence(index + 1);
+
+		lineContentsStream << lineBuffer;
+
+		getline(lineContentsStream, elementBuffer, elementDelimiter);
+
+		invoiceDocumentStructureArr[index].setSegmentID(elementBuffer);
+		invoiceDocumentStructureArr[index].setSegmentIDLen(elementBuffer.length());
+
+		index++;
+
+	}
+
+	return invoiceDocumentStructureArr;
 
 }
