@@ -185,6 +185,9 @@ InvDocument* parseDocumentLevelData(InvDocument* invoiceDocumentStructureArr, st
 
 		index++;
 
+		lineContentsStream.str("");  //This isn't covered in the Gaddis book (I don't think it is, at least), so I had to research why my segmentLinesArray wasn't advancing with each iteration. Turns out the entireLine needs to be reset/cleared each time using these member functions. Can't just overwrite with each pass through the for loop. https://cplusplus.com/reference/sstream/stringstream/?kw=stringstream
+		lineContentsStream.clear();
+
 	}
 
 	return invoiceDocumentStructureArr;
