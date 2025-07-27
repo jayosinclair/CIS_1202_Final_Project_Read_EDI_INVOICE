@@ -41,6 +41,7 @@ There are several complexities I did not attempt to implement here that would ma
 #include <sstream>
 #include <cctype>
 #include <string>
+#include <vector>
 #include "Schema.h"
 #include "InvDocument.h"
 #include "ElementData.h"
@@ -283,7 +284,11 @@ void displayInvDocumentArrContents(const int totalLineDelimiterCounter, InvDocum
 
 ElementData* populateElementDataArr(ElementData* elementDataArr, InvDocument* invDocumentStructureArr, const int totalElementDelimiterCounter, const int totalLineDelimiterCounter) {
 
-	
+	string token;
+	char elementDelimiter = '*';
+	stringstream contents;
+
+
 	/*
 	
 	elementNum = "";
@@ -293,18 +298,33 @@ ElementData* populateElementDataArr(ElementData* elementDataArr, InvDocument* in
 	*/
 
 
-	for (int i = 0; totalElementDelimiterCounter; i++) {
+	//Iterate through each line
 
-		for (int j = 0; j < invDocumentStructureArr[i]; j++) {
+		//Iterate through each element using the element length and handling for the delimiter
+
+
+	for (int i = 0; i < totalLineDelimiterCounter; i++) { //Iterate through each document line.
+
+		contents << invDocumentStructureArr[i].getLineContents(); //Assign the contents of the line from the document structure array to a stringstream that can then be parsed into tokens with getline.
+		
+		for (int j = 0; j < invDocumentStructureArr[i].getNumElements(); j++) {
+			
+			getline(contents, token, elementDelimiter);
+			cout << token << "  ";
+
+			for (int k = 0; k < totalElementDelimiterCounter; k++) {
 
 
 
+			}
 
 		}
 
+		cout << endl;
+		contents.str("");
+		contents.clear();
+
 	}
-
-
 
 	return elementDataArr;
 
