@@ -55,7 +55,7 @@ string readInvoiceInputFile(fstream&, int&, int&);
 void closeInvoiceInputFile(fstream&);
 InvDocument* populateInvoiceDocumentStructureArr(InvDocument*, string, const int, const int);
 void displayInvDocumentArrContents(const int, InvDocument*);
-ElementData* populateElementDataArr(ElementData*, InvDocument*, const int, const int);
+vector <ElementData>& populateElementDataVect(vector <ElementData>&, InvDocument*, const int, const int);
 
 
 
@@ -82,11 +82,24 @@ int main() {
 	//displayInvDocumentArrContents(totalLineDelimiterCounter, invDocumentStructureArr); //This call is just here in for testing.
 
 
-	//Create a dynamically allocated array to store element data.
-	ElementData* elementDataArr = nullptr;
-	elementDataArr = new ElementData[totalElementDelimiterCounter]; //TODO: Make sure to dealloc later.
+	////Create a dynamically allocated array to store element data.
+	//ElementData* elementDataArr = nullptr;
+	//elementDataArr = new ElementData[totalElementDelimiterCounter]; //TODO: Make sure to dealloc later.
 
-	elementDataArr = populateElementDataArr(elementDataArr, invDocumentStructureArr, totalElementDelimiterCounter, totalLineDelimiterCounter);
+	vector <ElementData> elementDataVect;
+
+	elementDataVect = populateElementDataVect(elementDataVect, invDocumentStructureArr, totalElementDelimiterCounter, totalLineDelimiterCounter);
+
+	//For testing:
+
+	for (int i = 0; i < elementDataVect.size(); i++) {
+
+		cout << "Element " << i << ": ";
+		elementDataVect[i].displayStrValue();
+		cout << endl;
+
+	}
+
 
 
 	cout << endl << endl;
@@ -282,11 +295,12 @@ void displayInvDocumentArrContents(const int totalLineDelimiterCounter, InvDocum
 
 
 
-ElementData* populateElementDataArr(ElementData* elementDataArr, InvDocument* invDocumentStructureArr, const int totalElementDelimiterCounter, const int totalLineDelimiterCounter) {
+vector <ElementData>& populateElementDataVect(vector <ElementData>& elementDataVect, InvDocument* invDocumentStructureArr, const int totalElementDelimiterCounter, const int totalLineDelimiterCounter) {
 
 	string token;
 	char elementDelimiter = '*';
 	stringstream contents;
+	ElementData tempObject;
 
 
 	/*
@@ -310,13 +324,14 @@ ElementData* populateElementDataArr(ElementData* elementDataArr, InvDocument* in
 		for (int j = 0; j < invDocumentStructureArr[i].getNumElements(); j++) {
 			
 			getline(contents, token, elementDelimiter);
-			cout << token << "  ";
-
-			for (int k = 0; k < totalElementDelimiterCounter; k++) {
-
-
-
+			
+			if (token == "") { //Explicitly write that a  token is null.
+				token = "NULL";
 			}
+
+			tempObject.setStrValue(token);
+			elementDataVect.push_back(tempObject);
+
 
 		}
 
@@ -326,6 +341,6 @@ ElementData* populateElementDataArr(ElementData* elementDataArr, InvDocument* in
 
 	}
 
-	return elementDataArr;
+	return elementDataVect;
 
 }

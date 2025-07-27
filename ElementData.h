@@ -60,6 +60,23 @@ public:
 		return elementLength;
 	}
 
+
+	void displayElemNum()
+	{
+		std::cout << getElementNum();
+	}
+
+	void displayStrValue()
+	{
+		std::cout << getStrValue();
+	}
+
+	void displayElementLength()
+	{
+		std::cout << getElementLength();
+	}
+
+
 };
 
 #endif
