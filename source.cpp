@@ -52,7 +52,9 @@ using namespace std;
 fstream openInvoiceInputFile();
 string readInvoiceInputFile(fstream&, int&, int&);
 void closeInvoiceInputFile(fstream&);
-InvDocument* parseDocumentLevelData(InvDocument*, string, const int, const int);
+InvDocument* populateInvoiceDocumentStructureArr(InvDocument*, string, const int, const int);
+void displayInvDocumentArrContents(const int, InvDocument*);
+ElementData* populateElementDataArr(ElementData*, InvDocument*, const int, const int);
 
 
 
@@ -73,23 +75,17 @@ int main() {
 	InvDocument* invDocumentStructureArr = nullptr;
 	invDocumentStructureArr = new InvDocument[totalLineDelimiterCounter]; //TODO: Make sure to dealloc later.
 	
-	invDocumentStructureArr = parseDocumentLevelData(invDocumentStructureArr, invoiceInputFileContentsStr, totalElementDelimiterCounter, totalLineDelimiterCounter);
+	invDocumentStructureArr = populateInvoiceDocumentStructureArr(invDocumentStructureArr, invoiceInputFileContentsStr, totalElementDelimiterCounter, totalLineDelimiterCounter);
 
 
+	//displayInvDocumentArrContents(totalLineDelimiterCounter, invDocumentStructureArr); //This call is just here in for testing.
 
 
-	for (int i = 0; i < totalLineDelimiterCounter; i++) {
+	//Create a dynamically allocated array to store element data.
+	ElementData* elementDataArr = nullptr;
+	elementDataArr = new ElementData[totalElementDelimiterCounter]; //TODO: Make sure to dealloc later.
 
-		cout << "Sequence: ";
-		invDocumentStructureArr[i].displaySequence();
-		cout << "\nSegment ID: ";
-		invDocumentStructureArr[i].displaySegmentID();
-		cout << "\nSegment Length: ";
-		invDocumentStructureArr[i].displaySegmentIDLen();
-		cout << endl << endl;
-
-	}
-
+	elementDataArr = populateElementDataArr(elementDataArr, invDocumentStructureArr, totalElementDelimiterCounter, totalLineDelimiterCounter);
 
 
 	cout << endl << endl;
@@ -98,6 +94,15 @@ int main() {
 
 }
 
+
+
+
+//*******************************************************************************************************************************************
+//
+//Function openInvoiceInputFile simply opens a file and passes it back (I did not pass it back by reference, although I could have. These
+//files are pretty lightweight. Process and close activites are left to other functions.
+//
+//*******************************************************************************************************************************************
 
 
 fstream openInvoiceInputFile() {
@@ -117,6 +122,14 @@ fstream openInvoiceInputFile() {
 }
 
 
+
+
+//*******************************************************************************************************************************************
+//
+//Function readInvoiceInputFile takes in the inputFile by reference, modifies reference variables for a couple key things to set up other 
+//functions (number of lines, number of elements total), and outputs all the inputFile's contents into a string variable.
+//
+//*******************************************************************************************************************************************
 
 string readInvoiceInputFile(fstream &invoiceInputFile, int &totalElementDelimiterCounter, int &totalLineDelimiterCounter) {
 
@@ -148,6 +161,14 @@ string readInvoiceInputFile(fstream &invoiceInputFile, int &totalElementDelimite
 
 }
 
+
+
+//*******************************************************************************************************************************************
+//
+//Function closeInvoiceInputFile simply closes the inputFile if it is open.
+//
+//*******************************************************************************************************************************************
+
 void closeInvoiceInputFile(fstream &invoiceInputFile) {
 
 	if (invoiceInputFile.is_open()) {
@@ -156,15 +177,24 @@ void closeInvoiceInputFile(fstream &invoiceInputFile) {
 
 }
 
-InvDocument* parseDocumentLevelData(InvDocument* invoiceDocumentStructureArr, string fileContentsStr, const int totalElementDelimiterCounter, const int totalLineDelimiterCounter) {
 
-	string segID = "";
-	int numElems = 0;
+
+//*******************************************************************************************************************************************
+//
+//Function populateInvoiceDocumentStructureArr populates the invoiceDocumentStructureArr array of type InvDocument to have key items
+//about the document's structure in one place within InvDocument instances' member variables. InvDocument is the base class for the ElementData
+//derived class.
+//
+//*******************************************************************************************************************************************
+
+InvDocument* populateInvoiceDocumentStructureArr(InvDocument* invoiceDocumentStructureArr, string fileContentsStr, const int totalElementDelimiterCounter, const int totalLineDelimiterCounter) {
+
 	int index = 0;
+	int lineElementCounter = 0;
+	int lineLength = 0;
 	char elementDelimiter = '*';
 	char lineDelimiter = '~';
-	char buffer = '@'; //Dummy value to start.
-	int charCounter = 0;
+	char charBuffer = '@';
 	stringstream fileContentsStream; //Setting up a stringstream to make parsing much friendlier.
 	stringstream lineContentsStream;
 	string lineBuffer;
@@ -172,14 +202,17 @@ InvDocument* parseDocumentLevelData(InvDocument* invoiceDocumentStructureArr, st
 
 	fileContentsStream << fileContentsStr;
 	
-	while (getline(fileContentsStream, lineBuffer, lineDelimiter)){
+	//This first loop gets all things EXCEPT the number of elements in an array. While this could probably be written a bit more efficiently with a single loop, I figured I was tempting fate.
 
+	while (getline(fileContentsStream, lineBuffer, lineDelimiter)){ //Go through the entire document, which is now represented as FileContentsStream.
+		
+		invoiceDocumentStructureArr[index].setLineContents(lineBuffer);
+		invoiceDocumentStructureArr[index].setLineLength(lineBuffer.length());
 		invoiceDocumentStructureArr[index].setSequence(index + 1);
 
 		lineContentsStream << lineBuffer;
 
-		getline(lineContentsStream, elementBuffer, elementDelimiter);
-
+		getline(lineContentsStream, elementBuffer, elementDelimiter); //Go through each line to just extract the first segment (beginning of line until * delimiter).
 		invoiceDocumentStructureArr[index].setSegmentID(elementBuffer);
 		invoiceDocumentStructureArr[index].setSegmentIDLen(elementBuffer.length());
 
@@ -190,6 +223,89 @@ InvDocument* parseDocumentLevelData(InvDocument* invoiceDocumentStructureArr, st
 
 	}
 
+	//Second loop gets the number of delimiters per line and populates the arribute for each item in the InvDocument array accordingly. Clear the buffer first just to be safe.
+	lineBuffer = "";
+
+	for (int i = 0; i < totalLineDelimiterCounter; i++) {
+
+		lineBuffer = invoiceDocumentStructureArr[i].getLineContents();
+		lineElementCounter = 0;
+
+		for (int j = 0; j < lineBuffer.length(); j++) {
+
+			if (lineBuffer.at(j) == elementDelimiter) {
+				lineElementCounter++;
+			}
+
+		}
+
+		invoiceDocumentStructureArr[i].setNumElements(lineElementCounter + 1); //Add 1 to the counter since we just counted delimiters and there's content ahead of the first delimiter.
+
+	}
+
 	return invoiceDocumentStructureArr;
+
+}
+
+
+
+//*******************************************************************************************************************************************
+//
+//Function displayInvDocumentArrContents prints the contents of each of the display memember functions of the InvDocment class when used with
+//invDocumentStructureArr element instances.
+//
+//*******************************************************************************************************************************************
+
+
+void displayInvDocumentArrContents(const int totalLineDelimiterCounter, InvDocument* invDocumentStructureArr) {
+
+	for (int i = 0; i < totalLineDelimiterCounter; i++) {
+
+		cout << "Sequence: ";
+		invDocumentStructureArr[i].displaySequence();
+		cout << "\nSegment ID: ";
+		invDocumentStructureArr[i].displaySegmentID();
+		cout << "\nSegment Length: ";
+		invDocumentStructureArr[i].displaySegmentIDLen();
+		cout << "\nLine Length: ";
+		invDocumentStructureArr[i].displayLineLength();
+		cout << "\nElement Count: ";
+		invDocumentStructureArr[i].displayNumElements();
+		cout << "\nWhole Line: ";
+		invDocumentStructureArr[i].displayLineContents();
+		cout << endl << endl;
+
+	}
+}
+
+
+
+
+ElementData* populateElementDataArr(ElementData* elementDataArr, InvDocument* invDocumentStructureArr, const int totalElementDelimiterCounter, const int totalLineDelimiterCounter) {
+
+	
+	/*
+	
+	elementNum = "";
+	strValue = "";
+	elementLength = 0;
+	
+	*/
+
+
+	for (int i = 0; totalElementDelimiterCounter; i++) {
+
+		for (int j = 0; j < invDocumentStructureArr[i]; j++) {
+
+
+
+
+		}
+
+	}
+
+
+
+	return elementDataArr;
 
 }

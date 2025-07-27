@@ -13,7 +13,9 @@ class InvDocument{
 	protected:
 
 		string segmentID;
+		string lineContents;
 		int segmentIDLen;
+		int lineLength;
 		int numElements;
 		int sequence;
 	
@@ -25,16 +27,20 @@ class InvDocument{
 
 		{
 			segmentID = "";
+			lineContents = "";
 			segmentIDLen = 0;
+			lineLength = 0;
 			numElements = 0;
 			sequence = 0;
 		}
 
-		InvDocument(string segIDVal, int segmentIDLength, int numElems, int seq, int elementLen)
+		InvDocument(string segIDVal, string wholeLineStr, int segmentIDLength, int lineLen, int numElems, int seq, int elementLen)
 
 		{
 			segmentID = segIDVal;
+			lineContents = wholeLineStr;
 			segmentIDLen = segmentIDLength;
+			lineLength = lineLen;
 			numElements = numElems;
 			sequence = seq;
 		}
@@ -50,9 +56,19 @@ class InvDocument{
 			segmentID = segIDVal;
 		}
 
+		void setLineContents(string wholeLineStr)
+		{
+			lineContents = wholeLineStr;
+		}
+
 		void setSegmentIDLen(int segmentIDLength) 
 		{
 			segmentIDLen = segmentIDLength;
+		}
+
+		void setLineLength(int lineLen)
+		{
+			lineLength = lineLen;
 		}
 
 		void setNumElements(int numElems)
@@ -74,9 +90,19 @@ class InvDocument{
 			return segmentID;
 		}
 
+		string getLineContents() const
+		{
+			return lineContents;
+		}
+
 		int getSegmentIDLen() const
 		{
 			return segmentIDLen;
+		}
+
+		int getLineLength() const
+		{
+			return lineLength;
 		}
 
 		int getNumElements() const
@@ -96,10 +122,22 @@ class InvDocument{
 			std::cout << getSegmentID();
 		}
 
+		void displayLineContents()
+		{
+			std::cout << getLineContents();
+		}
+
+
 		void displaySegmentIDLen()
 		{
 			std::cout << getSegmentIDLen();
 		}
+
+		void displayLineLength()
+		{
+			std::cout << getLineLength();
+		}
+		
 
 		void displayNumElements()
 		{
