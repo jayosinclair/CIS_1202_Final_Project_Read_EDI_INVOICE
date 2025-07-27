@@ -59,7 +59,8 @@ InvDocument* populateInvoiceDocumentStructureArr(InvDocument*, string, const int
 void displayInvDocumentArrContents(const int, InvDocument*);
 vector <ElementData>& populateElementDataVect(vector <ElementData>&, InvDocument*, const int, const int);
 string generateElementID(string, int);
-void displayElementDataVectContents(vector <ElementData>&);
+//void displayElementDataVectContents(vector <ElementData>&);
+int lookupSequenceNumberForElement(vector <ElementData>&, string);
 void renderInvoiceForHumans(vector <ElementData>&);
 //fstream& renderInvoiceForHumans(vector <ElementData>&, fstream&);
 
@@ -94,7 +95,7 @@ int main() {
 
 	//For testing:
 
-	displayElementDataVectContents(elementDataVect);
+	//displayElementDataVectContents(elementDataVect);
 
 	renderInvoiceForHumans(elementDataVect);
 
@@ -354,6 +355,23 @@ string generateElementID(string segmentID, int elementSequenceNumber) {
 }
 
 
+int lookupSequenceNumberForElement(vector <ElementData>& elementDataVect, string segmentID) {
+
+	int sequenceNumberForElement = -1;
+
+	for (int i = 0; i < elementDataVect.size(); i++) {
+
+		if (segmentID == elementDataVect[i].getElementNum()) {
+			sequenceNumberForElement = i;
+		}
+
+	}
+
+	return sequenceNumberForElement;
+
+}
+
+
 
 //*******************************************************************************************************************************************
 //
@@ -367,9 +385,9 @@ void renderInvoiceForHumans(vector <ElementData>& elementDataVect) {
 	cout << "Human-Readable Invoice" << endl;
 	cout << "_________________________________" << endl << endl;
 
-	//Need to use a sorting algorithm here to quickly obtain the element number in the vector based on the elementName. May as well go with selection sort even though it's a bit overkill. There are some files with some variants of X12 that can have many thousands of lines.
+	//TODO: Need to put in exceptions for when an out of range value is provided. -1 value, for example is when the element was not found in the vector.
+	cout << BIG02.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG02")].getStrValue();
 
-	cout << BIG02.elementName << ": " << elementDataVect[6].getStrValue();
 
 
 }

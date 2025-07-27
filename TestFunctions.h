@@ -58,6 +58,8 @@ void displayElementDataVectContents(vector <ElementData>& elementDataVect) {
 
 	for (int i = 0; i < elementDataVect.size(); i++) {
 
+		cout << "Sequence number: " << i << "  ";
+
 		elementDataVect[i].displayElemNum();
 		cout << "   ";
 
