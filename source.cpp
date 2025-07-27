@@ -38,12 +38,13 @@ There are several complexities I did not attempt to implement here that would ma
 
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <cctype>
 #include <string>
 #include <vector>
-#include <cmath> //TODO: Need to find a reason to use cmath since it's in the rubric... maybe a rounding function or something?
+#include <cmath>
 #include "Schema.h"
 #include "InvDocument.h"
 #include "ElementData.h"
@@ -61,6 +62,8 @@ vector <ElementData>& populateElementDataVect(vector <ElementData>&, InvDocument
 string generateElementID(string, int);
 //void displayElementDataVectContents(vector <ElementData>&);
 int lookupSequenceNumberForElement(vector <ElementData>&, string);
+
+double convertStringtoDoubleCustom(string);
 void renderInvoiceForHumans(vector <ElementData>&);
 //fstream& renderInvoiceForHumans(vector <ElementData>&, fstream&);
 
@@ -375,6 +378,33 @@ int lookupSequenceNumberForElement(vector <ElementData>& elementDataVect, string
 
 //*******************************************************************************************************************************************
 //
+//Function convertStringtoDoubleCustom is a exactly as described: it is a custom function I wrote to take in a string and convert it to a
+//double. This demonstrates some low-level stuff with C-strings and pointers.
+//
+//*******************************************************************************************************************************************
+
+double convertStringtoDoubleCustom(string strToConvert) {
+
+	double dblConverted = 0.0;
+	int strLength;
+	const char* stringStartPtr; //Have to use const char* with the c_str function because that function returns a pointer to a const char*.
+	
+
+	stringStartPtr = nullptr;
+	
+	strLength = strToConvert.length();
+
+	stringStartPtr = strToConvert.c_str();
+
+	dblConverted = atof(stringStartPtr); //The book says atof converts to a double (I would have thought it'd be float). This appears to work.
+
+	return dblConverted;
+
+}
+
+
+//*******************************************************************************************************************************************
+//
 //Function renderInvoiceForHumans takes key elements from the populated array with ElementData objects and marries with the 810 IC schema
 // to provide a human-readable view. This is an overloaded function that takes in one of two values: 0 for console or 1 for file.
 //
@@ -383,14 +413,49 @@ int lookupSequenceNumberForElement(vector <ElementData>& elementDataVect, string
 void renderInvoiceForHumans(vector <ElementData>& elementDataVect) {
 
 	cout << "Human-Readable Invoice" << endl;
+	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl;
+	//TODO: Need to put in exceptions for when an out of range value is provided. -1 value, for example is when the element was not found in the vector.
+
+	cout << "TOP-LEVEL" << endl;
+	cout << "_________________________________" << endl << endl;
+	cout << BIG02.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG02")].getStrValue() << endl; //BIG02 = Vendor Name
+	cout << BIG01.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG01")].getStrValue() << endl; //BIG01 = Invoice Date
+	cout << BIG04.elementName << " (" << BIG04.description << "): " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG04")].getStrValue() << endl; //BIG04 = PO Ref Number
+
+	//I'm taking a short-cut here... If I weren't trying to demonstrate use of structs as Schema for the class, I'd change that to be a class and make a bunch of member functions that would do something like take in N101, which is the party name qualifier and return a different value to render for each (VN = Vendor, ST = Ship To). All qualifiers/enumerations could be spelled out. Instead, I'm just going to hard-wire VN here for this exercise since this is the only N101 in the sample file.
+
+	cout << "Vendor ";
+	cout << N102.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "N102")].getStrValue() << endl << endl; //N102 = Party Name
+
+	cout << "\nLINE ITEM DETAIL:*" << endl;
 	cout << "_________________________________" << endl << endl;
 
-	//TODO: Need to put in exceptions for when an out of range value is provided. -1 value, for example is when the element was not found in the vector.
-	cout << BIG02.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG02")].getStrValue();
+	cout << IT107.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "IT107")].getStrValue() << endl; //IT107 = Product/Svc ID
+	cout << IT102.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "IT102")].getStrValue() << endl; //IT102 = Qty
+	cout << IT103.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "IT103")].getStrValue() << endl; //IT103 = Unit of Measure
 
+	//Convert string to double with my custom function to then be able to set precision to display dollar amount at 2 characters even though the same file used has four passed in. Yes, there's a lot going on here.
+		
+	cout << IT104.elementName << "**: $" << setprecision(2) << fixed << convertStringtoDoubleCustom(elementDataVect[lookupSequenceNumberForElement(elementDataVect, "IT104")].getStrValue()) << endl; //IT104 = Unit Price
 
+	cout << "\nSUMMARY:" << endl;
+	cout << "_________________________________" << endl << endl;
+	//Same idea here as above, but adding the round function to demonstrate CMATH since it's a requirement for the assignment. This is a pretty monstrous line that I pieced together
+	//one step at a time. All the years using Excel come in handy. When reading this, start getting the sequence number lookup for TDS01. This allows you to get the string value from 
+	//the vector. Then the string value can be converted into a double, which can then be rounded, which could then be formatted to display with two digits.
+
+	cout << TDS01.elementName << "***^: $" << setprecision(2) << fixed << round(convertStringtoDoubleCustom(elementDataVect[lookupSequenceNumberForElement(elementDataVect, "TDS01")].getStrValue())) << endl; //IT104 = Unit Price
+	
+
+	cout << "\n\nNOTES:" << endl;
+	cout << "_________________________________" << endl;
+	cout << "\n*I cut some corners here. This project assumes only one line item is submitted on the invoice. Perhaps I'll extend it to handle segment loops one day.";
+	cout << "\n\n**When more than two decimal places are used, they are not formatted for display here even though they are still carried behind the scenes.";
+	cout << "\n\n***" << TDS01.description << endl;
+	cout << "\n\n^Amount listed here is rounded up to nearest dollar (to demonstrate CMATH)." << endl;
 
 }
+
 
 
 //fstream& renderInvoiceForHumans(vector <ElementData>& elementDataVect, fstream& binaryOutputFile) {
