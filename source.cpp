@@ -5,17 +5,18 @@
 
 /*
 
-For this project, I leveraged my experience working in the Department of Defense in contracting eBusiness to make a program that can read an electronic invoice in the American National Standards Institute (ANSI) X12 electronic data interchange (EDI) 810 format. The DoD's business is more complex than a commercial grocery chain's, so I decided to use Kroger's January 2025 implementation convention (IC) posted at https://edi.kroger.com/EDIPortal/documents/Maps/kroger-modernized-systems/Kroger-Modernized-systems_EDI810.pdf.
+Content also in readme file on GitHub:
+
+For this project, I leveraged my experience working in the Department of Defense and Air Force/Navy contracting eBusiness to make a program that can read an electronic invoice in the American National Standards Institute (ANSI) X12 electronic data interchange (EDI) 810 format. The DoD's business is more complex than a commercial grocery chain's, so I decided to use Kroger's January 2025 implementation convention (IC) posted at https://edi.kroger.com/EDIPortal/documents/Maps/kroger-modernized-systems/Kroger-Modernized-systems_EDI810.pdf. This program merely handles most of the basics, although things like looping segments are ignored.
 
 
 Here are contents from the .txt file that is used with the submittal of this program, followed by an explanation.
 
 ST*810*0001~
-BIG*20210520*5615789**900000004801~
+BIG*20210520*5615789**9~
 N1*VN*VENDOR NAME*92*123456~
-N1*ST*KROGER OCADO - MONROE*9*1178579681001~
+IT1*ST*KROGER OCADO - MONROE*9*1178579681001~
 IT1**2*CA*9.6**UK*10120009998646~
-IT1**2*CA*9.6**UK*10120009990224~
 TDS*3840~
 SE*8*0001~
 
@@ -31,7 +32,7 @@ IT101 = Not populated (there is nothing between the delimiters
 IT102 = Quantity invoiced
 IT103 = Unit of Measure (CA = CASE)
 
-There are several complexities I did not attempt to implement here that would make this much more robust. For example, items can be "looped" (an example of this is the two IT1 lines). Also note that segment names can be repeated and contents may vary depending on where in the "document" a segment is located (header, detail, or summary). And character encoding issues popped up with line breaks when I tried to read in the file as binary text... Things that I didn't know how to tackle because they're beyond my skill level. I left such complexities to a project for another day. My goal here is merely to demonstrate as many concepts as I reasonably could from CIS 1202 in a final project program.
+There are several complexities I did not attempt to implement here that would make this much more robust. For example, items can be "looped" (an example of this is the two IT1 lines). Also note that segment names can be repeated and contents may vary depending on where in the "document" a segment is located (header, detail, or summary). And character encoding issues popped up with line breaks when I tried to read in the file as binary text... Things that I didn't know how to tackle because they're beyond my skill level. I left such complexities to a project for another day and therefore slightly modified the sample file contents in Kroger's IC document. I removed carriage returns in the data file used with the program, as a silent \r\n character was inhibiting my progress. I also removed content from BIG04 because it kept feeding in garbage. I first wrote code to read in as a binary file, but abandoned that approach because I couldn't get the tokens to parse quite correctly. My goal here is merely to demonstrate as many concepts as I reasonably could from CIS 1202 in a final project program. I'd love to come back to this after I learn more and fine tune details.
 
 */
 
@@ -42,6 +43,7 @@ There are several complexities I did not attempt to implement here that would ma
 #include <cctype>
 #include <string>
 #include <vector>
+#include <cmath> //TODO: Need to find a reason to use cmath since it's in the rubric... maybe a rounding function or something?
 #include "Schema.h"
 #include "InvDocument.h"
 #include "ElementData.h"
@@ -56,6 +58,7 @@ void closeInvoiceInputFile(fstream&);
 InvDocument* populateInvoiceDocumentStructureArr(InvDocument*, string, const int, const int);
 void displayInvDocumentArrContents(const int, InvDocument*);
 vector <ElementData>& populateElementDataVect(vector <ElementData>&, InvDocument*, const int, const int);
+void displayElementDataVectContents(vector <ElementData>&);
 
 
 
@@ -92,13 +95,7 @@ int main() {
 
 	//For testing:
 
-	for (int i = 0; i < elementDataVect.size(); i++) {
-
-		cout << "Element " << i << ": ";
-		elementDataVect[i].displayStrValue();
-		cout << endl;
-
-	}
+	displayElementDataVectContents(elementDataVect);
 
 
 
@@ -294,10 +291,18 @@ void displayInvDocumentArrContents(const int totalLineDelimiterCounter, InvDocum
 
 
 
+//*******************************************************************************************************************************************
+//
+//Function populateElementDataVect extracts tokens from the EDI file, with the help of data stored within invDocumentStructureArr and general
+//row/column-like size information previously sought, and populates a vector containing ElementData objects. The output of this function
+//is the elementDataVect vector passed back by reference with every element in the EDI document mapped to a particular segment address.
+//
+//*******************************************************************************************************************************************
 
 vector <ElementData>& populateElementDataVect(vector <ElementData>& elementDataVect, InvDocument* invDocumentStructureArr, const int totalElementDelimiterCounter, const int totalLineDelimiterCounter) {
 
 	string token;
+	string tempSegmentID;
 	char elementDelimiter = '*';
 	stringstream contents;
 	ElementData tempObject;
@@ -312,26 +317,43 @@ vector <ElementData>& populateElementDataVect(vector <ElementData>& elementDataV
 	*/
 
 
-	//Iterate through each line
-
-		//Iterate through each element using the element length and handling for the delimiter
+		//Iterate through each element using the element length and handling for the delimiter *.
 
 
 	for (int i = 0; i < totalLineDelimiterCounter; i++) { //Iterate through each document line.
 
 		contents << invDocumentStructureArr[i].getLineContents(); //Assign the contents of the line from the document structure array to a stringstream that can then be parsed into tokens with getline.
+
+		tempSegmentID = invDocumentStructureArr[i].getSegmentID();
 		
 		for (int j = 0; j < invDocumentStructureArr[i].getNumElements(); j++) {
 			
 			getline(contents, token, elementDelimiter);
 			
-			if (token == "") { //Explicitly write that a  token is null.
+			if (token == "") { //Explicitly write that a token is null if there's nothing between delimiters.
 				token = "NULL";
 			}
 
 			tempObject.setStrValue(token);
-			elementDataVect.push_back(tempObject);
+			tempObject.setElementLength(token.length());
+			tempObject.setSegmentID(tempSegmentID);
 
+			/*TODO: Populating the elementNumber for each token, such as ST01, ST02, etc is going to be tricky. We need to use the segmentID at the line level to populate all the elementNumber values for a given line.HOWEVER, we also need to find a way to concatenate the token number itself with the segmentID, adding a 0 between the segmentID and the token number is a single digit.Perhaps break this into a separate function?
+			
+			To demonstrate:
+
+			segmentID = ST (this can come from InvDocument)
+			token number = 1
+			Need to add a 0 between ST and 1 to get ST01
+
+			But, say we had 14 elements on the ST line... we would not add a filler 0. We'd just have ST14.
+
+			I think it'd make sense to loop through all the lines, to say for each line, assign the segment ID now that we know how many segments exist per line. Then we need to assign an element sequence number. Then concatenate
+
+			*/
+
+
+			elementDataVect.push_back(tempObject);
 
 		}
 
@@ -342,5 +364,29 @@ vector <ElementData>& populateElementDataVect(vector <ElementData>& elementDataV
 	}
 
 	return elementDataVect;
+
+}
+
+
+
+
+
+
+
+
+void displayElementDataVectContents(vector <ElementData>& elementDataVect) {
+
+	for (int i = 0; i < elementDataVect.size(); i++) {
+
+		cout << "Element " << i << ": ";
+		elementDataVect[i].displayStrValue();
+		cout << "   ";
+		elementDataVect[i].displayElementLength();
+		cout << "   ";
+		elementDataVect[i].displaySegmentID();
+
+		cout << endl;
+
+	}
 
 }
