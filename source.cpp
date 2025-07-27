@@ -47,8 +47,8 @@ There are several complexities I did not attempt to implement here that would ma
 #include "Schema.h"
 #include "InvDocument.h"
 #include "ElementData.h"
+//#include "TestFunctions.h"
 using namespace std;
-
 
 
 
@@ -58,7 +58,10 @@ void closeInvoiceInputFile(fstream&);
 InvDocument* populateInvoiceDocumentStructureArr(InvDocument*, string, const int, const int);
 void displayInvDocumentArrContents(const int, InvDocument*);
 vector <ElementData>& populateElementDataVect(vector <ElementData>&, InvDocument*, const int, const int);
+string generateElementID(string, int);
 void displayElementDataVectContents(vector <ElementData>&);
+void renderInvoiceForHumans(vector <ElementData>&);
+//fstream& renderInvoiceForHumans(vector <ElementData>&, fstream&);
 
 
 
@@ -85,10 +88,6 @@ int main() {
 	//displayInvDocumentArrContents(totalLineDelimiterCounter, invDocumentStructureArr); //This call is just here in for testing.
 
 
-	////Create a dynamically allocated array to store element data.
-	//ElementData* elementDataArr = nullptr;
-	//elementDataArr = new ElementData[totalElementDelimiterCounter]; //TODO: Make sure to dealloc later.
-
 	vector <ElementData> elementDataVect;
 
 	elementDataVect = populateElementDataVect(elementDataVect, invDocumentStructureArr, totalElementDelimiterCounter, totalLineDelimiterCounter);
@@ -96,6 +95,8 @@ int main() {
 	//For testing:
 
 	displayElementDataVectContents(elementDataVect);
+
+	renderInvoiceForHumans(elementDataVect);
 
 
 
@@ -262,37 +263,6 @@ InvDocument* populateInvoiceDocumentStructureArr(InvDocument* invoiceDocumentStr
 
 //*******************************************************************************************************************************************
 //
-//Function displayInvDocumentArrContents prints the contents of each of the display memember functions of the InvDocment class when used with
-//invDocumentStructureArr element instances.
-//
-//*******************************************************************************************************************************************
-
-
-void displayInvDocumentArrContents(const int totalLineDelimiterCounter, InvDocument* invDocumentStructureArr) {
-
-	for (int i = 0; i < totalLineDelimiterCounter; i++) {
-
-		cout << "Sequence: ";
-		invDocumentStructureArr[i].displaySequence();
-		cout << "\nSegment ID: ";
-		invDocumentStructureArr[i].displaySegmentID();
-		cout << "\nSegment Length: ";
-		invDocumentStructureArr[i].displaySegmentIDLen();
-		cout << "\nLine Length: ";
-		invDocumentStructureArr[i].displayLineLength();
-		cout << "\nElement Count: ";
-		invDocumentStructureArr[i].displayNumElements();
-		cout << "\nWhole Line: ";
-		invDocumentStructureArr[i].displayLineContents();
-		cout << endl << endl;
-
-	}
-}
-
-
-
-//*******************************************************************************************************************************************
-//
 //Function populateElementDataVect extracts tokens from the EDI file, with the help of data stored within invDocumentStructureArr and general
 //row/column-like size information previously sought, and populates a vector containing ElementData objects. The output of this function
 //is the elementDataVect vector passed back by reference with every element in the EDI document mapped to a particular segment address.
@@ -308,23 +278,14 @@ vector <ElementData>& populateElementDataVect(vector <ElementData>& elementDataV
 	ElementData tempObject;
 
 
-	/*
-	
-	elementNum = "";
-	strValue = "";
-	elementLength = 0;
-	
-	*/
-
-
-		//Iterate through each element using the element length and handling for the delimiter *.
+	//Iterate through each element using the element length and handling for the delimiter *.
 
 
 	for (int i = 0; i < totalLineDelimiterCounter; i++) { //Iterate through each document line.
 
 		contents << invDocumentStructureArr[i].getLineContents(); //Assign the contents of the line from the document structure array to a stringstream that can then be parsed into tokens with getline.
 
-		tempSegmentID = invDocumentStructureArr[i].getSegmentID();
+		tempSegmentID = invDocumentStructureArr[i].getSegmentID(); //Use this to make a linkage with each element and line using the segmentID from InvDocument. This is where all that work to get to inheritance pays off.
 		
 		for (int j = 0; j < invDocumentStructureArr[i].getNumElements(); j++) {
 			
@@ -334,30 +295,19 @@ vector <ElementData>& populateElementDataVect(vector <ElementData>& elementDataV
 				token = "NULL";
 			}
 
+			//Populate elements.
+
 			tempObject.setStrValue(token);
 			tempObject.setElementLength(token.length());
 			tempObject.setSegmentID(tempSegmentID);
-
-			/*TODO: Populating the elementNumber for each token, such as ST01, ST02, etc is going to be tricky. We need to use the segmentID at the line level to populate all the elementNumber values for a given line.HOWEVER, we also need to find a way to concatenate the token number itself with the segmentID, adding a 0 between the segmentID and the token number is a single digit.Perhaps break this into a separate function?
-			
-			To demonstrate:
-
-			segmentID = ST (this can come from InvDocument)
-			token number = 1
-			Need to add a 0 between ST and 1 to get ST01
-
-			But, say we had 14 elements on the ST line... we would not add a filler 0. We'd just have ST14.
-
-			I think it'd make sense to loop through all the lines, to say for each line, assign the segment ID now that we know how many segments exist per line. Then we need to assign an element sequence number. Then concatenate
-
-			*/
-
+			tempObject.setElementNum(generateElementID(tempSegmentID, j)); //Function generateElementID does some work that I offloaded to simplify the instant function.
 
 			elementDataVect.push_back(tempObject);
 
+			
+
 		}
 
-		cout << endl;
 		contents.str("");
 		contents.clear();
 
@@ -369,24 +319,66 @@ vector <ElementData>& populateElementDataVect(vector <ElementData>& elementDataV
 
 
 
+//*******************************************************************************************************************************************
+//
+//Function generateElementID does some string manipulation to make an element ID for each element in a given segment. The function
+//concatenates the alphanumeric segment ID + 0 (if the position is 0-9) + a numeric position, returning as a string.
+//
+//*******************************************************************************************************************************************
 
+string generateElementID(string segmentID, int elementSequenceNumber) {
 
+	string generatedElementID;
 
+	//First, make the sequence number itself a string
 
+	if (elementSequenceNumber >= 0 && elementSequenceNumber < 10) {
 
-void displayElementDataVectContents(vector <ElementData>& elementDataVect) {
+		generatedElementID = "0";
+		generatedElementID = generatedElementID.append(to_string(elementSequenceNumber));
+		
+	}
 
-	for (int i = 0; i < elementDataVect.size(); i++) {
+	else {
 
-		cout << "Element " << i << ": ";
-		elementDataVect[i].displayStrValue();
-		cout << "   ";
-		elementDataVect[i].displayElementLength();
-		cout << "   ";
-		elementDataVect[i].displaySegmentID();
-
-		cout << endl;
+		generatedElementID = to_string(elementSequenceNumber);
 
 	}
 
+	//Second, prepend the segmentID
+
+	generatedElementID = segmentID.append(generatedElementID);
+
+	return generatedElementID;
+
 }
+
+
+
+//*******************************************************************************************************************************************
+//
+//Function renderInvoiceForHumans takes key elements from the populated array with ElementData objects and marries with the 810 IC schema
+// to provide a human-readable view. This is an overloaded function that takes in one of two values: 0 for console or 1 for file.
+//
+//*******************************************************************************************************************************************
+
+void renderInvoiceForHumans(vector <ElementData>& elementDataVect) {
+
+	cout << "Human-Readable Invoice" << endl;
+	cout << "_________________________________" << endl << endl;
+
+	//Need to use a sorting algorithm here to quickly obtain the element number in the vector based on the elementName. May as well go with selection sort even though it's a bit overkill. There are some files with some variants of X12 that can have many thousands of lines.
+
+	cout << BIG02.elementName << ": " << elementDataVect[6].getStrValue();
+
+
+}
+
+
+//fstream& renderInvoiceForHumans(vector <ElementData>& elementDataVect, fstream& binaryOutputFile) {
+//
+//	//Think about this... Perhaps this is a good place to employ templates for output with cout vs fstream?
+//
+//	return binaryOutputFile;
+//
+//}
