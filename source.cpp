@@ -38,7 +38,7 @@ There are several complexities I did not attempt to implement here that would ma
 
 Concepts from the course: tons of string processing, including both C++ string objects and C-strings; pointers; dynamic memory allocation with arrays; STL vector; advanced file operations with both binary and ASCII text (I did not include seekg/tellg in the ultimate product since I changed file read methods); structs, enums, classes, inheritance, passing many types of objects by reference, and more.
 
-See the README in the GitHub repository for how to use the program.
+See the README in the GitHub repository for how to use the program and test data (two additional test files are included in the directory; just change the names to krogerSampleInvoice810.dat.
 
 */
 
