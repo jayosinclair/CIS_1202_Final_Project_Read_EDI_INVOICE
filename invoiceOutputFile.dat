@@ -1,0 +1,37 @@
+Human-Readable Invoice
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TOP-LEVEL
+_________________________________
+
+Invoice Number: 5615789
+Invoice Issue Date: 20210520
+Purchase Order Number (Identifying number for Purchase Order assigned by the orderer/purchaser.): J9819
+Vendor Name: OLSON FOOD SUPPLY
+
+
+LINE ITEM DETAIL:*
+_________________________________
+
+Product/Service ID: 10120009998646
+Quantity Invoiced: 7
+Unit or Basis for Measurement Code: CA
+Unit Price**: $9.67
+
+SUMMARY:
+_________________________________
+
+Amount***^: $68.00
+
+
+NOTES:
+_________________________________
+
+*I cut some corners here. This project assumes only one line item is submitted on the invoice. Perhaps I'll extend it to handle segment loops one day.
+
+**When more than two decimal places are used, they are not formatted for display here even though they are still carried behind the scenes.
+
+***Monetary amount. Note: the total invoice amount (item quantities times cost, adjusted with any item allowance/charge; totaled for all items; adjusted with any invoice allowance/charge.
+
+
+^Amount listed here is rounded up to nearest dollar (to demonstrate CMATH).

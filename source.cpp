@@ -62,16 +62,18 @@ vector <ElementData>& populateElementDataVect(vector <ElementData>&, InvDocument
 string generateElementID(string, int);
 //void displayElementDataVectContents(vector <ElementData>&);
 int lookupSequenceNumberForElement(vector <ElementData>&, string);
-
 double convertStringtoDoubleCustom(string);
+fstream& openBinaryOutputFile(fstream&);
+void closeBinaryOutputFile(fstream&);
 void renderInvoiceForHumans(vector <ElementData>&);
-//fstream& renderInvoiceForHumans(vector <ElementData>&, fstream&);
+fstream& renderInvoiceForHumans(vector <ElementData>&, fstream&); //Overloaded function.
 
 
 
 int main() {
 
 	fstream invoiceInputFile;
+	fstream invoiceBinaryOutputFile;
 	string invoiceInputFileContentsStr;
 	int totalElementDelimiterCounter = 0;
 	int totalLineDelimiterCounter = 0;
@@ -100,8 +102,11 @@ int main() {
 
 	//displayElementDataVectContents(elementDataVect);
 
-	renderInvoiceForHumans(elementDataVect);
+	renderInvoiceForHumans(elementDataVect); //This is the console output version.
 
+	openBinaryOutputFile(invoiceBinaryOutputFile);
+	renderInvoiceForHumans(elementDataVect, invoiceBinaryOutputFile); //The is the file output version.
+	closeBinaryOutputFile(invoiceBinaryOutputFile);
 
 
 	cout << endl << endl;
@@ -403,6 +408,63 @@ double convertStringtoDoubleCustom(string strToConvert) {
 }
 
 
+
+//*******************************************************************************************************************************************
+//
+//Function openBinaryOutputFile opens a file expected to receive output from another function.
+//
+//*******************************************************************************************************************************************
+
+fstream& openBinaryOutputFile(fstream& binaryOutputFile) {
+
+	binaryOutputFile.open("invoiceOutputFile.dat", ios::in | ios::binary); //Check to see whether the file is already open.
+
+	if (binaryOutputFile.fail()) {
+		//The file does not exist, so create it.
+		binaryOutputFile.open("invoiceOutputFile.dat", ios::out | ios::binary);
+
+	}
+
+	else {
+
+		cout << "The file is already open.";
+		//TODO: Throw an exception.
+		binaryOutputFile.close(); //This is just here temporarily. The error handler should do something.
+
+	}
+
+	return binaryOutputFile;
+
+}
+
+
+
+
+//*******************************************************************************************************************************************
+//
+//Function closeBinaryOutputFile closes a file passed in by reference from another function.
+//
+//*******************************************************************************************************************************************
+
+void closeBinaryOutputFile(fstream& binaryOutputFile) {
+
+	if (binaryOutputFile.fail()) {
+
+		cout << "The requested file is not open." << endl << endl;
+
+	}
+
+	else {
+
+		binaryOutputFile.close();
+
+	}
+
+
+}
+
+
+
 //*******************************************************************************************************************************************
 //
 //Function renderInvoiceForHumans takes key elements from the populated array with ElementData objects and marries with the 810 IC schema
@@ -458,10 +520,51 @@ void renderInvoiceForHumans(vector <ElementData>& elementDataVect) {
 
 
 
-//fstream& renderInvoiceForHumans(vector <ElementData>& elementDataVect, fstream& binaryOutputFile) {
-//
-//	//Think about this... Perhaps this is a good place to employ templates for output with cout vs fstream?
-//
-//	return binaryOutputFile;
-//
-//}
+fstream& renderInvoiceForHumans(vector <ElementData>& elementDataVect, fstream& fout) { //I used fout here to make it easier to compare between this function and the one using cout. Just pass in the binaryOutputFile and fout serves as an alias within this scope.
+
+	fout << "Human-Readable Invoice" << endl;
+	fout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl;
+	//TODO: Need to put in exceptions for when an out of range value is provided. -1 value, for example is when the element was not found in the vector.
+
+	fout << "TOP-LEVEL" << endl;
+	fout << "_________________________________" << endl << endl;
+	fout << BIG02.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG02")].getStrValue() << endl; //BIG02 = Vendor Name
+	fout << BIG01.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG01")].getStrValue() << endl; //BIG01 = Invoice Date
+	fout << BIG04.elementName << " (" << BIG04.description << "): " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG04")].getStrValue() << endl; //BIG04 = PO Ref Number
+
+	//I'm taking a short-cut here... If I weren't trying to demonstrate use of structs as Schema for the class, I'd change that to be a class and make a bunch of member functions that would do something like take in N101, which is the party name qualifier and return a different value to render for each (VN = Vendor, ST = Ship To). All qualifiers/enumerations could be spelled out. Instead, I'm just going to hard-wire VN here for this exercise since this is the only N101 in the sample file.
+
+	fout << "Vendor ";
+	fout << N102.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "N102")].getStrValue() << endl << endl; //N102 = Party Name
+
+	fout << "\nLINE ITEM DETAIL:*" << endl;
+	fout << "_________________________________" << endl << endl;
+
+	fout << IT107.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "IT107")].getStrValue() << endl; //IT107 = Product/Svc ID
+	fout << IT102.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "IT102")].getStrValue() << endl; //IT102 = Qty
+	fout << IT103.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "IT103")].getStrValue() << endl; //IT103 = Unit of Measure
+
+	//Convert string to double with my custom function to then be able to set precision to display dollar amount at 2 characters even though the same file used has four passed in. Yes, there's a lot going on here.
+
+	fout << IT104.elementName << "**: $" << setprecision(2) << fixed << convertStringtoDoubleCustom(elementDataVect[lookupSequenceNumberForElement(elementDataVect, "IT104")].getStrValue()) << endl; //IT104 = Unit Price
+
+	fout << "\nSUMMARY:" << endl;
+	fout << "_________________________________" << endl << endl;
+	//Same idea here as above, but adding the round function to demonstrate CMATH since it's a requirement for the assignment. This is a pretty monstrous line that I pieced together
+	//one step at a time. All the years using Excel come in handy. When reading this, start getting the sequence number lookup for TDS01. This allows you to get the string value from 
+	//the vector. Then the string value can be converted into a double, which can then be rounded, which could then be formatted to display with two digits.
+
+	fout << TDS01.elementName << "***^: $" << setprecision(2) << fixed << round(convertStringtoDoubleCustom(elementDataVect[lookupSequenceNumberForElement(elementDataVect, "TDS01")].getStrValue())) << endl; //IT104 = Unit Price
+
+
+	fout << "\n\nNOTES:" << endl;
+	fout << "_________________________________" << endl;
+	fout << "\n*I cut some corners here. This project assumes only one line item is submitted on the invoice. Perhaps I'll extend it to handle segment loops one day.";
+	fout << "\n\n**When more than two decimal places are used, they are not formatted for display here even though they are still carried behind the scenes.";
+	fout << "\n\n***" << TDS01.description << endl;
+	fout << "\n\n^Amount listed here is rounded up to nearest dollar (to demonstrate CMATH)." << endl;
+
+
+	return fout; //Return fout so it can be closed from a different calling function.
+
+}
