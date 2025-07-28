@@ -38,7 +38,7 @@ There are several complexities I did not attempt to implement here that would ma
 
 Concepts from the course: tons of string processing, including both C++ string objects and C-strings; pointers; dynamic memory allocation with arrays; STL vector; advanced file operations with both binary and ASCII text (I did not include seekg/tellg in the ultimate product since I changed file read methods); structs, enums, classes, inheritance, passing many types of objects by reference, and more.
 
-See the README in the GitHub repository for how to use the program.
+See the README in the GitHub repository for how to use the program and test data (two additional test files are included in the directory; just change the names to krogerSampleInvoice810.dat.
 
 */
 
@@ -97,7 +97,30 @@ int main() {
 
 
 	//Open, read, close inputFile to pre-process/get set up. Also get the number of rows/columns (even though each row has a variable number of contents) while reading it.
-	invoiceInputFile = openInvoiceInputFile();
+	
+	try {
+
+		invoiceInputFile = openInvoiceInputFile();
+
+	}
+	
+	catch (string exceptionMsg) {
+
+		cout << exceptionMsg;
+		cout << "Try one more time and press any key: ";
+		cin.get();
+		invoiceInputFile = openInvoiceInputFile();
+
+	}
+
+	catch (...) {
+
+		cout << "Please ensure the input file is correctly placed and named, then re-run the program." << endl;
+		exit(EXIT_SUCCESS);
+
+	}
+
+
 	invoiceInputFileContentsStr = readInvoiceInputFile(invoiceInputFile, totalElementDelimiterCounter, totalLineDelimiterCounter);
 	closeInvoiceInputFile(invoiceInputFile);
 
@@ -196,11 +219,11 @@ fstream openInvoiceInputFile() {
 
 	fstream invoiceInputFile;
 	invoiceInputFile.open("krogerSampleInvoice810.dat", ios::in);
+	string cannotLocateFileException = "ERROR. File cannot open. Please check the directory.\n";
 
 	if (!invoiceInputFile) {
 
-		cout << "Error";
-		exit(EXIT_SUCCESS); //TODO: Maybe write an exception rather than abort the whole program.
+		throw cannotLocateFileException;
 
 	}
 
@@ -432,21 +455,21 @@ string generateElementID(string segmentID, int elementSequenceNumber) {
 
 //*******************************************************************************************************************************************
 //
-//Function displayElementVectContents is not used in the program itself, but it's something I made for testing.
+//Function displayElementVectContents prints a few pieces of data from an EDI 810 file to the console in a tabular format.
 //
 //*******************************************************************************************************************************************
 
 void displayElementDataVectContents(vector <ElementData>& elementDataVect) {
 
+	cout << "#" << setw(20) << "Element ID" << setw(30) << "Value" << endl;
+	cout << "----------------------------------------------------------------------------" << endl;
+
 	for (int i = 0; i < elementDataVect.size(); i++) {
 
-		cout << "Sequence number: " << i << "  ";
-
+		cout << i << setw(20); //0-9 being single digit makes the formatting quite not aligned, but that's not worth picking at.
 		elementDataVect[i].displayElemNum();
-		cout << "   ";
-
+		cout << setw(30);
 		elementDataVect[i].displayStrValue();
-
 		cout << endl;
 
 	}
@@ -457,11 +480,28 @@ int lookupSequenceNumberForElement(vector <ElementData>& elementDataVect, string
 
 	int sequenceNumberForElement = -1;
 
-	for (int i = 0; i < elementDataVect.size(); i++) {
+	try {
 
-		if (segmentID == elementDataVect[i].getElementNum()) {
-			sequenceNumberForElement = i;
+		for (int i = 0; i < elementDataVect.size(); i++) {
+
+			if (segmentID == elementDataVect[i].getElementNum()) {
+				sequenceNumberForElement = i;
+			}
+
 		}
+
+	}
+
+	catch (string exceptionValueNotFound) {
+
+		cout << exceptionValueNotFound << endl;
+		exit(EXIT_SUCCESS);
+
+	}
+
+	if (sequenceNumberForElement == -1){
+
+		string exceptionValueNotFound = "Error! Element not found in elementDataVect.";
 
 	}
 
@@ -517,8 +557,6 @@ fstream& openBinaryOutputFile(fstream& binaryOutputFile) {
 
 	else {
 
-		cout << "The file is already open.";
-		//TODO: Throw an exception.
 		binaryOutputFile.close(); //This is just here temporarily. The error handler should do something.
 
 	}
@@ -540,7 +578,7 @@ void closeBinaryOutputFile(fstream& binaryOutputFile) {
 
 	if (binaryOutputFile.fail()) {
 
-		cout << "The requested file is not open." << endl << endl;
+		//Do nothing.
 
 	}
 
@@ -563,11 +601,10 @@ void closeBinaryOutputFile(fstream& binaryOutputFile) {
 //*******************************************************************************************************************************************
 
 void renderInvoiceForHumans(vector <ElementData>& elementDataVect) {
-
+	
 	cout << "Human-Readable Invoice" << endl;
 	cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl;
-	//TODO: Need to put in exceptions for when an out of range value is provided. -1 value, for example is when the element was not found in the vector.
-
+	
 	cout << "TOP-LEVEL" << endl;
 	cout << "_________________________________" << endl << endl;
 	cout << BIG02.elementName << ": " << elementDataVect[lookupSequenceNumberForElement(elementDataVect, "BIG02")].getStrValue() << endl; //BIG02 = Vendor Name
@@ -614,7 +651,7 @@ fstream& renderInvoiceForHumans(vector <ElementData>& elementDataVect, fstream& 
 
 	fout << "Human-Readable Invoice" << endl;
 	fout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl << endl;
-	//TODO: Need to put in exceptions for when an out of range value is provided. -1 value, for example is when the element was not found in the vector.
+	//If a value isn't returned as expected, lookupSequenceNumberForElement terminates the program when the exception is thrown. This may be a bit severe, but I do not ever expect an issue -- at least with the EDI file used as a sample.
 
 	fout << "TOP-LEVEL" << endl;
 	fout << "_________________________________" << endl << endl;
