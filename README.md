@@ -1,6 +1,6 @@
 # CIS_1202_Final_Project_Read_EDI_INVOICE
 
-Content also in readme file on GitHub:
+This project was intended for educational purposes for CIS 1202. It was not meant for anyone to use for commercial purposes, and I expressly do not provide permission to use this project for commercial interests.
 
 For this project, I leveraged my experience working in the Department of Defense and Air Force contracting eBusiness to make a program that can read an electronic invoice in the American National Standards Institute (ANSI) X12 electronic data interchange (EDI) 810 format. I'm quite familiar with X12, but doing something with it programmatically like this is entirely new to me and was a huge challenge that took me a couple weeks and a couple scrapped iterations before this one -- they were so different that I decided just to scrap them for parts and take a different approach each time. 
 
