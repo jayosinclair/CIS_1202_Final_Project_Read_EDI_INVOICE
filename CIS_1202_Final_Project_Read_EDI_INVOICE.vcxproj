@@ -125,7 +125,6 @@
   <ItemGroup>
     <ClCompile Include="ElementData.cpp" />
     <ClCompile Include="source.cpp" />
-    <ClCompile Include="TestFunctions.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ElementData.h" />

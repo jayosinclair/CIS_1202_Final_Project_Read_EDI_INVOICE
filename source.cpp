@@ -7,7 +7,9 @@
 
 Content also in readme file on GitHub:
 
-For this project, I leveraged my experience working in the Department of Defense and Air Force/Navy contracting eBusiness to make a program that can read an electronic invoice in the American National Standards Institute (ANSI) X12 electronic data interchange (EDI) 810 format. The DoD's business is more complex than a commercial grocery chain's, so I decided to use Kroger's January 2025 implementation convention (IC) posted at https://edi.kroger.com/EDIPortal/documents/Maps/kroger-modernized-systems/Kroger-Modernized-systems_EDI810.pdf. This program merely handles most of the basics, although things like looping segments are ignored.
+For this project, I leveraged my experience working in the Department of Defense and Air Force contracting eBusiness to make a program that can read an electronic invoice in the American National Standards Institute (ANSI) X12 electronic data interchange (EDI) 810 format. I'm quite familiar with X12, but doing something with it programmatically like this is entirely new to me and was a huge challenge that took me a couple weeks and a couple scrapped iterations before this one -- they were so different that I decided just to scrap them for parts and take a different approach each time. 
+
+The DoD's business is more complex than a commercial grocery chain's, so I decided to use Kroger's January 2025 implementation convention (IC) posted at https://edi.kroger.com/EDIPortal/documents/Maps/kroger-modernized-systems/Kroger-Modernized-systems_EDI810.pdf. This program merely handles most of the basics, although concepts like looping segments are ignored. Perhaps I'll return to that once I'm more experienced with programming and make this more robust.
 
 
 Here are contents from the .txt file that is used with the submittal of this program, followed by an explanation.
@@ -32,7 +34,11 @@ IT101 = Not populated (there is nothing between the delimiters
 IT102 = Quantity invoiced
 IT103 = Unit of Measure (CA = CASE)
 
-There are several complexities I did not attempt to implement here that would make this much more robust. For example, items can be "looped" (an example of this is the two IT1 lines). Also note that segment names can be repeated and contents may vary depending on where in the "document" a segment is located (header, detail, or summary). And character encoding issues popped up with line breaks when I tried to read in the file as binary text... Things that I didn't know how to tackle because they're beyond my skill level. I left such complexities to a project for another day and therefore slightly modified the sample file contents in Kroger's IC document. I removed carriage returns in the data file used with the program, as a silent \r\n character was inhibiting my progress. I also removed content from BIG04 because it kept feeding in garbage. I first wrote code to read in as a binary file, but abandoned that approach because I couldn't get the tokens to parse quite correctly. My goal here is merely to demonstrate as many concepts as I reasonably could from CIS 1202 in a final project program. I'd love to come back to this after I learn more and fine tune details.
+There are several complexities I did not attempt to implement here that would make this much more robust. For example, as previously mentioned, items can be "looped" (an example of this is the two IT1 lines). Also note that segment names can be repeated and contents may vary depending on where in the "document" a segment is located (header, detail, or summary). And character encoding issues popped up with line breaks when I tried to read in the file as binary text... Things that I didn't know how to tackle because they're beyond my skill level. I therefore slightly modified the sample file contents in Kroger's IC document. I removed carriage returns in the data file used with the program, as a silent \r\n character was inhibiting my progress. I also removed content from BIG04 because it kept feeding in garbage. I first wrote code to read in as a binary file, but abandoned that approach because I couldn't get the tokens to parse quite correctly. I ended up reusing the code to write binary output instead. My goal here is merely to demonstrate as many concepts as I reasonably could from CIS 1202 in a final project program. Much more work could be done in a future effort for schema validations and perhaps even generating an 810 from user-provided data.
+
+Concepts from the course: tons of string processing, including both C++ string objects and C-strings; pointers; dynamic memory allocation with arrays; STL vector; advanced file operations with both binary and ASCII text (I did not include seekg/tellg in the ultimate product since I changed file read methods); structs, enums, classes, inheritance, passing many types of objects by reference, and more.
+
+See the README in the GitHub repository for how to use the program.
 
 */
 
@@ -52,15 +58,13 @@ There are several complexities I did not attempt to implement here that would ma
 using namespace std;
 
 
-
 fstream openInvoiceInputFile();
 string readInvoiceInputFile(fstream&, int&, int&);
 void closeInvoiceInputFile(fstream&);
 InvDocument* populateInvoiceDocumentStructureArr(InvDocument*, string, const int, const int);
-void displayInvDocumentArrContents(const int, InvDocument*);
 vector <ElementData>& populateElementDataVect(vector <ElementData>&, InvDocument*, const int, const int);
 string generateElementID(string, int);
-//void displayElementDataVectContents(vector <ElementData>&);
+void displayElementDataVectContents(vector <ElementData>&);
 int lookupSequenceNumberForElement(vector <ElementData>&, string);
 double convertStringtoDoubleCustom(string);
 fstream& openBinaryOutputFile(fstream&);
@@ -68,15 +72,29 @@ void closeBinaryOutputFile(fstream&);
 void renderInvoiceForHumans(vector <ElementData>&);
 fstream& renderInvoiceForHumans(vector <ElementData>&, fstream&); //Overloaded function.
 
+int displayMenu(int VIEW_HUMAN_INVOICE_ON_CONSOLE, int OUTPUT_HUMAN_INVOICE_TO_FILE, int VIEW_MACHINE_INVOICE, int QUIT);
+bool getYNResponseAsBool();
 
 
 int main() {
 
+	const int VIEW_HUMAN_INVOICE_ON_CONSOLE = 1; //I could have made these global, but they only get passed to menuSelection, so easy enough to manage this way.
+	const int OUTPUT_HUMAN_INVOICE_TO_FILE = 2;
+	const int VIEW_MACHINE_INVOICE = 3;
+	const int QUIT = 4;
+
+	bool again = true;
+	int menuSelection;
 	fstream invoiceInputFile;
 	fstream invoiceBinaryOutputFile;
 	string invoiceInputFileContentsStr;
 	int totalElementDelimiterCounter = 0;
 	int totalLineDelimiterCounter = 0;
+
+
+	//*******************************************************************************************************************************************************************************
+	//This is all preprocessing activity before getting to the menu/first user prompt.
+
 
 	//Open, read, close inputFile to pre-process/get set up. Also get the number of rows/columns (even though each row has a variable number of contents) while reading it.
 	invoiceInputFile = openInvoiceInputFile();
@@ -86,27 +104,75 @@ int main() {
 
 	//Create a dynamically allocated array to store the invoice document structure info.
 	InvDocument* invDocumentStructureArr = nullptr;
-	invDocumentStructureArr = new InvDocument[totalLineDelimiterCounter]; //TODO: Make sure to dealloc later.
+	invDocumentStructureArr = new InvDocument[totalLineDelimiterCounter];
 	
 	invDocumentStructureArr = populateInvoiceDocumentStructureArr(invDocumentStructureArr, invoiceInputFileContentsStr, totalElementDelimiterCounter, totalLineDelimiterCounter);
-
-
-	//displayInvDocumentArrContents(totalLineDelimiterCounter, invDocumentStructureArr); //This call is just here in for testing.
-
 
 	vector <ElementData> elementDataVect;
 
 	elementDataVect = populateElementDataVect(elementDataVect, invDocumentStructureArr, totalElementDelimiterCounter, totalLineDelimiterCounter);
 
-	//For testing:
 
-	//displayElementDataVectContents(elementDataVect);
 
-	renderInvoiceForHumans(elementDataVect); //This is the console output version.
+	//*******************************************************************************************************************************************************************************
+	//This is for the menu.
 
-	openBinaryOutputFile(invoiceBinaryOutputFile);
-	renderInvoiceForHumans(elementDataVect, invoiceBinaryOutputFile); //The is the file output version.
-	closeBinaryOutputFile(invoiceBinaryOutputFile);
+	cout << "Kroger EDI 810 Invoice Reader and Generator" << endl;
+	cout << "By Jay Olson" << endl;
+	cout << "-------------------------------------------" << endl << endl;
+
+
+	while (again) {
+
+		menuSelection = displayMenu(VIEW_HUMAN_INVOICE_ON_CONSOLE, OUTPUT_HUMAN_INVOICE_TO_FILE, VIEW_MACHINE_INVOICE, QUIT);
+
+		switch (menuSelection) {
+
+		case VIEW_HUMAN_INVOICE_ON_CONSOLE:
+
+			system("cls"); //Clear the screen to remove clutter.
+			renderInvoiceForHumans(elementDataVect); //This is the console output version.
+
+			break;
+
+		case OUTPUT_HUMAN_INVOICE_TO_FILE:
+
+			system("cls"); //Clear the screen to remove clutter.
+			openBinaryOutputFile(invoiceBinaryOutputFile);
+			renderInvoiceForHumans(elementDataVect, invoiceBinaryOutputFile); //The is the file output version.
+			closeBinaryOutputFile(invoiceBinaryOutputFile);
+			cout << "File output complete. If a previous file existed, it has been overwritten. See \"invoiceOutputFile.dat\" in the program's directory." << endl;
+
+			break;
+
+		case VIEW_MACHINE_INVOICE:
+
+			system("cls"); //Clear the screen to remove clutter.
+			displayElementDataVectContents(elementDataVect);
+
+			break;
+
+
+		case QUIT:
+
+			cout << "Program terminating..." << endl;
+			return 0;
+
+		default:
+			return 1;
+
+		}
+
+		cout << "\n\n\nWOULD YOU LIKE TO MAKE ANOTHER MENU CHOICE? (Y/N): ";
+		again = getYNResponseAsBool();
+		cout << endl << endl;
+
+	}
+
+
+
+	delete[] invDocumentStructureArr; //Do some memory management. This array isn't needed after the vector is populated... At least in this implementation.
+	invDocumentStructureArr = nullptr;
 
 
 	cout << endl << endl;
@@ -115,8 +181,8 @@ int main() {
 
 }
 
-
-
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 
 
 //*******************************************************************************************************************************************
 //
@@ -363,6 +429,30 @@ string generateElementID(string segmentID, int elementSequenceNumber) {
 }
 
 
+
+//*******************************************************************************************************************************************
+//
+//Function displayElementVectContents is not used in the program itself, but it's something I made for testing.
+//
+//*******************************************************************************************************************************************
+
+void displayElementDataVectContents(vector <ElementData>& elementDataVect) {
+
+	for (int i = 0; i < elementDataVect.size(); i++) {
+
+		cout << "Sequence number: " << i << "  ";
+
+		elementDataVect[i].displayElemNum();
+		cout << "   ";
+
+		elementDataVect[i].displayStrValue();
+
+		cout << endl;
+
+	}
+
+}
+
 int lookupSequenceNumberForElement(vector <ElementData>& elementDataVect, string segmentID) {
 
 	int sequenceNumberForElement = -1;
@@ -566,5 +656,87 @@ fstream& renderInvoiceForHumans(vector <ElementData>& elementDataVect, fstream& 
 
 
 	return fout; //Return fout so it can be closed from a different calling function.
+
+}
+
+
+
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//*******************************************************************************************************************************************
+//
+//Function displayMenu is the main menu for this program. It asks the user for a choice of capability and provides the answer back to main.
+//
+//*******************************************************************************************************************************************
+
+int displayMenu(int VIEW_HUMAN_INVOICE_ON_CONSOLE, int OUTPUT_HUMAN_INVOICE_TO_FILE, int VIEW_MACHINE_INVOICE, int QUIT) {
+
+	int userChoice = -1;
+
+	cout << "Please enter a selection from the menu below." << endl << endl;
+	cout << "1. View human-readable invoice from EDI 810 file on the CONSOLE." << endl;
+	cout << "2. View human-readable invoice from EDI 810 file in a BINARY FILE." << endl;
+	cout << "3. View machine-readable invoice from EDI 810 file on the CONSOLE." << endl;
+	cout << "4. Quit." << endl << endl;
+	cout << "Selection: ";
+
+	cin >> userChoice;
+
+	while (userChoice < VIEW_HUMAN_INVOICE_ON_CONSOLE || userChoice > QUIT) {
+		cout << "Invalid input. Please enter an integer between " << VIEW_HUMAN_INVOICE_ON_CONSOLE << " and " << QUIT << ": ";
+		cin >> userChoice;
+	}
+
+	return userChoice;
+
+}
+
+
+
+//*******************************************************************************************************************************************
+//
+//Function getYNResponseAsBool is a reusable utility function that can collect a Y/N char answer from the console, 
+//validate input, andd return a boolean value with 0 = N and 1 = Y.
+//
+//*******************************************************************************************************************************************
+
+bool getYNResponseAsBool() {
+
+	bool response;
+	char charResponse = 'X';
+
+	if (cin.fail()) {
+
+		cin.ignore();
+
+	}
+
+	cin >> charResponse;
+	charResponse = toupper(charResponse);
+
+	while (charResponse != 'Y' && charResponse != 'N') {
+
+		cout << "Invalid input. Please enter \"Y\" or \"N\": ";
+		cin >> charResponse;
+		toupper(charResponse);
+
+	}
+
+	if (charResponse == 'Y') {
+
+		response = true;
+
+	}
+
+	else {
+
+		response = false;
+
+	}
+
+	cout << endl;
+
+	return response;
 
 }
