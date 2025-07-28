@@ -50,9 +50,18 @@ The user is presented with four options:
 
 Selecting the first option will display the sample EDI 810 file, but rendered for human eyes. The rendering isn't a full rendering of all the EDI file's contents, but it shows a few. The schema struct file is leveraged to provide context to data elements.
 
+<img width="1482" height="762" alt="image" src="https://github.com/user-attachments/assets/6a264b99-b63a-46a4-bc13-acce2bd166e8" />
+
+
 Selecting the second option will show the same output as the first option, but it'll print to a binary DAT file at the project's directory instead. If a file named "invoiceOutputFile.dat" previously existed in the directory, it'll be replaced/overwritten when selecting this option.
 
+<img width="1210" height="862" alt="image" src="https://github.com/user-attachments/assets/df4eee05-eee6-4c31-8bc0-e20747029f7c" />
+
+
 Selecting the third option will display some of the critical elements of the EDI file on the console.
+
+<img width="1482" height="762" alt="image" src="https://github.com/user-attachments/assets/c4c7700d-b872-4c16-8428-0a4a26beba9b" />
+
 
 The fourth option is to quit the program.
 
